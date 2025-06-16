@@ -17,7 +17,7 @@ X        = X_raw.values
 N, M     = X.shape
 n_models = M
 
-#%% Plot: Overall accuracies per model (Set1 palette)
+#%% Plot: Overall accuracies per model 
 acc_list = []
 for i in range(n_models):
     counts = np.bincount(X[:, i].astype(int), minlength=2)
@@ -41,7 +41,7 @@ for rect, value in zip(bars, acc_list):
 plt.tight_layout()
 plt.show()
 
-#%% Plot: Accuracy per difficulty (Set1 palette)
+#%% Plot: Accuracy per difficulty 
 difficulties = sorted(df_clean["Difficulty"].unique())
 acc_per_diff = np.zeros((len(difficulties), n_models))
 for d_idx, d in enumerate(difficulties):
@@ -118,7 +118,7 @@ labels    = [f"Model {k+1}" for k in range(n_models)]
 p_df      = pd.DataFrame(p_mat,   index=labels, columns=labels)
 theta_df  = pd.DataFrame(theta,    index=labels, columns=labels)
 
-# Heatmaps for p-values & θ̂ (blue palette)
+# Heatmaps for p-values & θ̂ 
 fig, axes = plt.subplots(1,2, figsize=(12,5))
 cmap_blue = plt.cm.Blues
 
