@@ -17,7 +17,7 @@ X        = X_raw.values
 N, M     = X.shape
 n_models = M
 
-#%% Plot: Overall accuracies per model (nyt farvevalg: tab10)
+#%% Plot: Overall accuracies per model (nyt farvevalg: Set1)
 acc_list = []
 for i in range(n_models):
     counts = np.bincount(X[:, i].astype(int), minlength=2)
@@ -41,7 +41,7 @@ for rect, value in zip(bars, acc_list):
 plt.tight_layout()
 plt.show()
 
-#%% Plot: Accuracy per difficulty (nyt farvevalg: tab10)
+#%% Plot: Accuracy per difficulty (nyt farvevalg: Set1)
 difficulties = sorted(df_clean["Difficulty"].unique())
 acc_per_diff = np.zeros((len(difficulties), n_models))
 for d_idx, d in enumerate(difficulties):
@@ -77,7 +77,7 @@ for d_idx in range(len(difficulties)):
 plt.tight_layout()
 plt.show()
 
-#%% McNemar: pairwise tests + heatmaps (blå palette)
+#%% McNemar: pairwise tests + heatmaps (blue palette) + CI + Bonferroni
 def mcnemar(y_true, yhatA, yhatB, alpha=0.05):
     nn = np.zeros((2,2), int)
     c1 = (yhatA - y_true)==0
@@ -96,9 +96,10 @@ def mcnemar(y_true, yhatA, yhatB, alpha=0.05):
     b = (1-E)*0.5*(Q-1)
     CI = tuple(lm*2 - 1 for lm in scipy.stats.beta.interval(0.95, a=a, b=b))
     # Exact p-value
-    p_val = 2*scipy.stats.binom.cdf(min(n12,n21), n=n12+n21, p=0.5)
+    p_val = 2 * scipy.stats.binom.cdf(min(n12,n21), n=n12+n21, p=0.5)
     return thetahat, CI, p_val
 
+# Compute pairwise McNemar
 y_true = np.ones(N, dtype=int)
 p_mat   = np.eye(n_models)
 theta   = np.zeros((n_models,n_models))
@@ -108,16 +109,16 @@ ci_U    = np.zeros((n_models,n_models))
 for i in range(n_models):
     for j in range(i+1, n_models):
         t_hat, (lower, upper), p = mcnemar(y_true, X[:,i], X[:,j])
-        p_mat[i,j] = p_mat[j,i] = p
-        theta[i,j] = theta[j,i] = t_hat
-        ci_L[i,j]  = ci_L[j,i]  = lower
-        ci_U[i,j]  = ci_U[j,i]  = upper
+        p_mat[i,j]   = p_mat[j,i]   = p
+        theta[i,j]   = theta[j,i]   = t_hat
+        ci_L[i,j]    = ci_L[j,i]    = lower
+        ci_U[i,j]    = ci_U[j,i]    = upper
 
-labels   = [f"Model {k+1}" for k in range(n_models)]
-p_df     = pd.DataFrame(p_mat,   index=labels, columns=labels)
-theta_df = pd.DataFrame(theta,    index=labels, columns=labels)
+labels    = [f"Model {k+1}" for k in range(n_models)]
+p_df      = pd.DataFrame(p_mat,   index=labels, columns=labels)
+theta_df  = pd.DataFrame(theta,    index=labels, columns=labels)
 
-# Heatmaps for p-values & θ̂ med blå palette
+# Heatmaps for p-values & θ̂
 fig, axes = plt.subplots(1,2, figsize=(12,5))
 cmap_blue = plt.cm.Blues
 
@@ -144,7 +145,38 @@ fig.colorbar(im2, ax=axes[1], fraction=0.046, pad=0.04)
 plt.tight_layout()
 plt.show()
 
-#%% Confusion matrices as heatmaps (gråtone)
+#%% 95% konfidensintervaller for θ̂
+ci_table = pd.DataFrame([["–"]*n_models for _ in range(n_models)],
+                        index=labels, columns=labels)
+for i in range(n_models):
+    for j in range(n_models):
+        if i < j:
+            ci_table.iloc[i,j] = f"[{ci_L[i,j]:.3f}, {ci_U[i,j]:.3f}]"
+            ci_table.iloc[j,i] = ci_table.iloc[i,j]
+
+print("\n95% konfidensintervaller for θ̂ (difference in accuracy):")
+print(ci_table.to_string())
+
+#%% Bonferroni-korrektion af p-værdier
+alpha = 0.05
+k_tests = n_models*(n_models-1)//2
+alpha_bonf = alpha / k_tests
+print(f"\nBonferroni-justeret α = {alpha_bonf:.4f}")
+
+p_adj = np.minimum(p_mat * k_tests, 1.0)
+p_adj_df = pd.DataFrame(p_adj, index=labels, columns=labels).round(4)
+
+sig_mask = p_adj < alpha
+sig_df   = pd.DataFrame(sig_mask, index=labels, columns=labels)
+
+print("\nRå p-værdier:")
+print(p_df.round(4).to_string())
+print(f"\nBonferroni-korrigerede p-værdier (×{k_tests}):")
+print(p_adj_df.to_string())
+print(f"\nSignifikans efter Bonferroni (α={alpha}):")
+print(sig_df.to_string())
+
+#%% Confusion matrices as heatmaps 
 cms = []
 pairs = []
 max_count = 0
@@ -161,7 +193,8 @@ for i in range(n_models):
         pairs.append((i+1, j+1))
         max_count = max(max_count, nn.max())
 
-fig, axes = plt.subplots(int(np.ceil(len(cms)/3)), 3, figsize=(12, 4*int(np.ceil(len(cms)/3))))
+fig, axes = plt.subplots(int(np.ceil(len(cms)/3)), 3,
+                         figsize=(12, 4*int(np.ceil(len(cms)/3))))
 axes = axes.flatten()
 cmap_gray = plt.cm.Blues
 
@@ -177,17 +210,3 @@ for idx, (nn, (i, j)) in enumerate(zip(cms, pairs)):
             ax.text(c, r, nn[r,c], ha="center", va="center", fontsize=12)
 fig.tight_layout()
 plt.show()
-
-#%% 95% konfidensintervaller for θ̂
-ci_table = pd.DataFrame([["–"]*n_models for _ in range(n_models)],
-                        index=labels, columns=labels)
-for i in range(n_models):
-    for j in range(n_models):
-        if i < j:
-            ci_table.iloc[i,j] = f"[{ci_L[i,j]:.3f}, {ci_U[i,j]:.3f}]"
-            ci_table.iloc[j,i] = ci_table.iloc[i,j]
-
-print("\n95% konfidensintervaller for θ̂ (difference in accuracy):")
-print(ci_table.to_string())
-
-# %%
