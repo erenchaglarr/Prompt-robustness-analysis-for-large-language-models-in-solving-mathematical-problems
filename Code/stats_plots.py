@@ -226,3 +226,26 @@ fig.tight_layout()
 plt.show()
 
 # %%
+from scipy.stats import chi2_contingency
+# Binær klassifikation: 1 = korrekt, 0 = forkert
+X = df_clean.drop(columns=["Difficulty"]).values
+y = df_clean["Difficulty"].values
+n_models = X.shape[1]
+difficulties = sorted(np.unique(y))
+
+# Byg kontingenstabeller og kør chi2-test for hver model
+chi2_results = []
+for model_idx in range(n_models):
+    table = []
+    for d in difficulties:
+        mask = y == d
+        correct = np.sum(X[mask, model_idx] == 1)
+        incorrect = np.sum(X[mask, model_idx] == 0)
+        table.append([correct, incorrect])
+    chi2_stat, p_val, dof, expected = chi2_contingency(table)
+    chi2_results.append((f"Model {model_idx+1}", chi2_stat, p_val, dof))
+
+# Vis resultater
+results_df = pd.DataFrame(chi2_results, columns=["Model", "Chi2 Stat", "p-value", "df"])
+print(results_df)
+# %%
