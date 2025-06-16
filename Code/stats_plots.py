@@ -164,8 +164,8 @@ for idx, (nn, (i, j)) in enumerate(zip(cms, pairs)):
     im = ax.imshow(nn, cmap=cmap_gray, vmin=0, vmax=max_count)
     ax.set_title(f"Model {i} vs Model {j}")
     ax.set_xticks([0,1]); ax.set_yticks([0,1])
-    ax.set_xticklabels(["j korrekt","j forkert"])
-    ax.set_yticklabels(["i korrekt","i forkert"])
+    ax.set_xticklabels([f"Model {j} Correct",f"Model {j} Incorrect"])
+    ax.set_yticklabels([f"Model {i} Correct",f"Model {i} Incorrect"])
     for r in range(2):
         for c in range(2):
             ax.text(c, r, nn[r,c], ha="center", va="center", fontsize=12)
