@@ -6,7 +6,7 @@ import pandas as pd
 import openpyxl
 import matplotlib.pyplot as plt
 
-document = pd.read_excel("model_math_data.xlsx")
+document = pd.read_excel("model_math_data")
 
 # %% Cleaning the dataframe
 df = document.copy()
