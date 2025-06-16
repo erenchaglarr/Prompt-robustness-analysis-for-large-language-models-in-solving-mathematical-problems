@@ -89,23 +89,29 @@ def mcnemar(y_true, yhatA, yhatB, alpha=0.05):
     n = nn.sum()
     n12, n21 = nn[0,1], nn[1,0]
     thetahat = (n12 - n21)/n
+    # Beta-CI
     E = thetahat
     Q = (n**2*(n+1)*(E+1)*(1-E)) / (n*(n12+n21) - (n12-n21)**2)
     a = (E+1)*0.5*(Q-1)
     b = (1-E)*0.5*(Q-1)
     CI = tuple(lm*2 - 1 for lm in scipy.stats.beta.interval(0.95, a=a, b=b))
+    # Exact p-value
     p_val = 2*scipy.stats.binom.cdf(min(n12,n21), n=n12+n21, p=0.5)
     return thetahat, CI, p_val
 
 y_true = np.ones(N, dtype=int)
 p_mat   = np.eye(n_models)
 theta   = np.zeros((n_models,n_models))
+ci_L    = np.zeros((n_models,n_models))
+ci_U    = np.zeros((n_models,n_models))
 
 for i in range(n_models):
     for j in range(i+1, n_models):
-        t_hat, CI, p = mcnemar(y_true, X[:,i], X[:,j])
+        t_hat, (lower, upper), p = mcnemar(y_true, X[:,i], X[:,j])
         p_mat[i,j] = p_mat[j,i] = p
         theta[i,j] = theta[j,i] = t_hat
+        ci_L[i,j]  = ci_L[j,i]  = lower
+        ci_U[i,j]  = ci_U[j,i]  = upper
 
 labels   = [f"Model {k+1}" for k in range(n_models)]
 p_df     = pd.DataFrame(p_mat,   index=labels, columns=labels)
@@ -164,12 +170,24 @@ for idx, (nn, (i, j)) in enumerate(zip(cms, pairs)):
     im = ax.imshow(nn, cmap=cmap_gray, vmin=0, vmax=max_count)
     ax.set_title(f"Model {i} vs Model {j}")
     ax.set_xticks([0,1]); ax.set_yticks([0,1])
-    ax.set_xticklabels([f"Model {j} Correct",f"Model {j} Incorrect"])
-    ax.set_yticklabels([f"Model {i} Correct",f"Model {i} Incorrect"])
+    ax.set_xticklabels([f"Model {j} Correct", f"Model {j} Incorrect"])
+    ax.set_yticklabels([f"Model {i} Correct", f"Model {i} Incorrect"])
     for r in range(2):
         for c in range(2):
             ax.text(c, r, nn[r,c], ha="center", va="center", fontsize=12)
 fig.tight_layout()
 plt.show()
+
+#%% 95% konfidensintervaller for θ̂
+ci_table = pd.DataFrame([["–"]*n_models for _ in range(n_models)],
+                        index=labels, columns=labels)
+for i in range(n_models):
+    for j in range(n_models):
+        if i < j:
+            ci_table.iloc[i,j] = f"[{ci_L[i,j]:.3f}, {ci_U[i,j]:.3f}]"
+            ci_table.iloc[j,i] = ci_table.iloc[i,j]
+
+print("\n95% konfidensintervaller for θ̂ (difference in accuracy):")
+print(ci_table.to_string())
 
 # %%
