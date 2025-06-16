@@ -17,7 +17,7 @@ X        = X_raw.values
 N, M     = X.shape
 n_models = M
 
-#%% Plot: Overall accuracies per model (nyt farvevalg: Set1)
+#%% Plot: Overall accuracies per model (Set1 palette)
 acc_list = []
 for i in range(n_models):
     counts = np.bincount(X[:, i].astype(int), minlength=2)
@@ -41,7 +41,7 @@ for rect, value in zip(bars, acc_list):
 plt.tight_layout()
 plt.show()
 
-#%% Plot: Accuracy per difficulty (nyt farvevalg: Set1)
+#%% Plot: Accuracy per difficulty (Set1 palette)
 difficulties = sorted(df_clean["Difficulty"].unique())
 acc_per_diff = np.zeros((len(difficulties), n_models))
 for d_idx, d in enumerate(difficulties):
@@ -77,7 +77,7 @@ for d_idx in range(len(difficulties)):
 plt.tight_layout()
 plt.show()
 
-#%% McNemar: pairwise tests + heatmaps (blue palette) + CI + Bonferroni
+#%% McNemar: pairwise tests + heatmaps + CI + Bonferroni
 def mcnemar(y_true, yhatA, yhatB, alpha=0.05):
     nn = np.zeros((2,2), int)
     c1 = (yhatA - y_true)==0
@@ -118,7 +118,7 @@ labels    = [f"Model {k+1}" for k in range(n_models)]
 p_df      = pd.DataFrame(p_mat,   index=labels, columns=labels)
 theta_df  = pd.DataFrame(theta,    index=labels, columns=labels)
 
-# Heatmaps for p-values & θ̂
+# Heatmaps for p-values & θ̂ (blue palette)
 fig, axes = plt.subplots(1,2, figsize=(12,5))
 cmap_blue = plt.cm.Blues
 
@@ -157,11 +157,11 @@ for i in range(n_models):
 print("\n95% konfidensintervaller for θ̂ (difference in accuracy):")
 print(ci_table.to_string())
 
-#%% Bonferroni-korrektion af p-værdier
+#%% Bonferroni-correction of p-values
 alpha = 0.05
 k_tests = n_models*(n_models-1)//2
 alpha_bonf = alpha / k_tests
-print(f"\nBonferroni-justeret α = {alpha_bonf:.4f}")
+print(f"\nBonferroni-adjusted α = {alpha_bonf:.4f}")
 
 p_adj = np.minimum(p_mat * k_tests, 1.0)
 p_adj_df = pd.DataFrame(p_adj, index=labels, columns=labels).round(4)
@@ -169,14 +169,28 @@ p_adj_df = pd.DataFrame(p_adj, index=labels, columns=labels).round(4)
 sig_mask = p_adj < alpha
 sig_df   = pd.DataFrame(sig_mask, index=labels, columns=labels)
 
-print("\nRå p-værdier:")
+print("\nRaw p-values:")
 print(p_df.round(4).to_string())
-print(f"\nBonferroni-korrigerede p-værdier (×{k_tests}):")
+print(f"\nBonferroni-corrected p-values (×{k_tests}):")
 print(p_adj_df.to_string())
-print(f"\nSignifikans efter Bonferroni (α={alpha}):")
+print(f"\nSignificance after Bonferroni (α={alpha}):")
 print(sig_df.to_string())
 
-#%% Confusion matrices as heatmaps 
+#%% Heatmap for Bonferroni-corrected p-values
+fig, ax = plt.subplots(figsize=(6, 5))
+im = ax.imshow(p_adj_df, cmap=cmap_blue, vmin=0, vmax=1)
+ax.set(title="Bonferroni-adjusted p-values",
+       xticks=range(n_models), yticks=range(n_models),
+       xticklabels=labels, yticklabels=labels)
+for i in range(n_models):
+    for j in range(n_models):
+        ax.text(j, i, f"{p_adj_df.values[i,j]:.3f}",
+                ha="center", va="center", fontsize=8)
+fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
+plt.tight_layout()
+plt.show()
+
+#%% Confusion matrices as heatmaps
 cms = []
 pairs = []
 max_count = 0
@@ -210,3 +224,5 @@ for idx, (nn, (i, j)) in enumerate(zip(cms, pairs)):
             ax.text(c, r, nn[r,c], ha="center", va="center", fontsize=12)
 fig.tight_layout()
 plt.show()
+
+# %%
