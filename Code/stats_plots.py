@@ -1,12 +1,9 @@
 #%% Importing libraries and document
 import numpy as np
-import xlrd
-from collections import Counter
 import pandas as pd
-import openpyxl
 import matplotlib.pyplot as plt
 
-document = pd.read_excel("model_math_data")
+document = pd.read_excel("model_math_data.xlsx")
 
 # %% Cleaning the dataframe
 df = document.copy()
