@@ -225,6 +225,7 @@ for idx, (nn, (i, j)) in enumerate(zip(cms, pairs)):
 fig.tight_layout()
 plt.show()
 
+
 # %%
 from scipy.stats import chi2_contingency
 # Binær klassifikation: 1 = korrekt, 0 = forkert
@@ -248,4 +249,21 @@ for model_idx in range(n_models):
 # Vis resultater
 results_df = pd.DataFrame(chi2_results, columns=["Model", "Chi2 Stat", "p-value", "df"])
 print(results_df)
+# %%
+z = 1.96  # For 95% CI
+ci_list = []
+for i in range(n_models):
+    x = int(acc_list[i] * N)
+    n = N
+    p_tilde = (x + 1) / (n + 2)
+    se_tilde = np.sqrt(p_tilde * (1 - p_tilde) / (n + 2))
+    ci = (max(0, p_tilde - z * se_tilde), min(1, p_tilde + z * se_tilde))
+    ci_list.append(ci)
+
+# Som tabel
+ci_df = pd.DataFrame(ci_list, columns=["Lower CI", "Upper CI"])
+ci_df.index = [f"Model {i+1}" for i in range(n_models)]
+ci_df["Accuracy"] = acc_list
+print("\n95% konfidensintervaller med +2-metoden:")
+print(ci_df.round(4))
 # %%
